@@ -9,7 +9,7 @@ jobs:
     runs-on: [self-hosted, tzer0m]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Stop service
         run: sudo systemctl stop ChitterUI.service
       - name: Publish
