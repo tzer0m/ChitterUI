@@ -1,6 +1,8 @@
 @page "/"
 @inject ChitterApiService ChitterApi
 @inject QuoteService Quotes
+@inject GeofenceService Geofence
+@inject IJSRuntime JS
 
 <PageTitle>Chitter</PageTitle>
 
@@ -11,36 +13,42 @@
 
     <div class="receipt__divider"></div>
 
-    <textarea class="receipt__input" placeholder="Type something to print..." maxlength="1024" @bind="Text" @bind:event="oninput" disabled="@IsSending"></textarea>
-
-    <div class="receipt__meta">
-        <span>@Text.Length / 1024</span>
-    </div>
-
-    <div class="receipt__actions">
-        <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
-            @(IsSending ? "Printing..." : "Print")
-        </button>
-    </div>
-
-    <div class="receipt__divider"></div>
-
-    <div class="receipt__actions">
-        <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
-            @(IsSending ? "Printing..." : "Chinese Proverb")
-        </button>
-
-        <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
-            @(IsSending ? "Printing..." : "Motivational Quote")
-        </button>
-    </div>
-
-    <div class="receipt__divider"></div>
-
-
-    @if (StatusMessage is not null)
+    @if (LocationState == LocationCheckState.Allowed)
     {
-        <p class="receipt__status @(IsError ? "receipt__status--error" : "receipt__status--success")">@StatusMessage</p>
+        <textarea class="receipt__input" placeholder="Type something to print..." maxlength="1024" @bind="Text" @bind:event="oninput" disabled="@IsSending"></textarea>
+
+        <div class="receipt__meta">
+            <span>@Text.Length / 1024</span>
+        </div>
+
+        <div class="receipt__actions">
+            <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
+                @(IsSending ? "Printing..." : "Print")
+            </button>
+        </div>
+
+        <div class="receipt__divider"></div>
+
+        <div class="receipt__actions">
+            <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
+                @(IsSending ? "Printing..." : "Chinese Proverb")
+            </button>
+
+            <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
+                @(IsSending ? "Printing..." : "Motivational Quote")
+            </button>
+        </div>
+
+        <div class="receipt__divider"></div>
+
+        @if (StatusMessage is not null)
+        {
+            <p class="receipt__status @(IsError ? "receipt__status--error" : "receipt__status--success")">@StatusMessage</p>
+        }
+    }
+    else
+    {
+        <p class="receipt__status">@LocationStateMessage</p>
     }
 
     <div class="receipt__barcode"></div>
@@ -58,6 +66,46 @@
 
     // Whether StatusMessage represents an error rather than a success.
     private bool IsError;
+
+    // The current state of the browser geolocation check that gates the whole form.
+    private LocationCheckState LocationState = LocationCheckState.Checking;
+
+    /// <summary>
+    /// The states the location check can be in.
+    /// </summary>
+    private enum LocationCheckState
+    {
+        Checking,
+        Allowed,
+        Denied,
+        Unavailable,
+    }
+
+    /// <summary>
+    /// A user-facing message describing the current LocationState, shown in place of the form.
+    /// </summary>
+    private string LocationStateMessage => LocationState switch
+    {
+        LocationCheckState.Checking => "Checking your location...",
+        LocationCheckState.Denied => "Chitter only works from home.",
+        _ => "Couldn't get your location - check your browser's location permission and try again.",
+    };
+
+    /// <summary>
+    /// Requests the browser's location on first render and checks it against the configured home geofence.
+    /// </summary>
+    /// <param name="firstRender">Whether this is the component's first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        IJSObjectReference geolocationModule = await JS.InvokeAsync<IJSObjectReference>("import", "./geolocation.js");
+        GeoPosition? position = await geolocationModule.InvokeAsync<GeoPosition?>("getPosition");
+
+        LocationState = position is null ? LocationCheckState.Unavailable : Geofence.IsWithinRange(position.Latitude, position.Longitude) ? LocationCheckState.Allowed : LocationCheckState.Denied;
+        StateHasChanged();
+    }
 
     /// <summary>
     /// Sends the current text to tzer0mApi's Chitter endpoint, clearing the text box on success.
