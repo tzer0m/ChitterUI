@@ -1,7 +1,9 @@
 using ChitterUI.Components;
+using ChitterUI.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddHttpClient<ChitterApiService>(client => client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? throw new InvalidOperationException("Api:BaseUrl is not configured")));
 
 WebApplication app = builder.Build();
 if (!app.Environment.IsDevelopment())
