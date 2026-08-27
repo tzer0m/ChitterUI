@@ -1,3 +1,69 @@
 ﻿@page "/"
+@inject ChitterApiService ChitterApi
 
 <PageTitle>Chitter</PageTitle>
+
+<div class="receipt">
+    <header class="receipt__header">
+        <h1>Chitter</h1>
+    </header>
+
+    <div class="receipt__divider"></div>
+
+    <textarea class="receipt__input" placeholder="Type something to print..." maxlength="1024" @bind="Text" @bind:event="oninput" disabled="@IsSending"></textarea>
+
+    <div class="receipt__meta">
+        <span>@Text.Length / 1024</span>
+    </div>
+
+    <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
+        @(IsSending ? "Printing..." : "Print")
+    </button>
+
+    @if (StatusMessage is not null)
+    {
+        <p class="receipt__status @(IsError ? "receipt__status--error" : "receipt__status--success")">@StatusMessage</p>
+    }
+
+    <div class="receipt__divider"></div>
+    <div class="receipt__barcode"></div>
+</div>
+
+@code {
+    // The text currently entered in the print box.
+    private string Text = string.Empty;
+
+    // Whether a print request is currently in flight.
+    private bool IsSending;
+
+    // The most recent status message to show the user, or null if none yet.
+    private string? StatusMessage;
+
+    // Whether StatusMessage represents an error rather than a success.
+    private bool IsError;
+
+    /// <summary>
+    /// Sends the current text to tzer0mApi's Chitter endpoint and displays the outcome.
+    /// </summary>
+    private async Task PrintAsync()
+    {
+        IsSending = true;
+        StatusMessage = null;
+        StateHasChanged();
+
+        ChitterPrintResult result = await ChitterApi.PrintTextAsync(Text);
+        IsSending = false;
+
+        if (result.Success)
+        {
+            IsError = false;
+            StatusMessage = "Sent to printer.";
+            Text = string.Empty;
+        }
+        else
+        {
+            IsError = true;
+            StatusMessage = result.ErrorMessage;
+        }
+    }
+}

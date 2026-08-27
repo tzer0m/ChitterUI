@@ -1,0 +1,131 @@
+.receipt {
+    position: relative;
+    max-width: 380px;
+    margin: 4rem auto;
+    padding: 2.5rem 1.75rem 2rem;
+    background: #fdfaf0;
+    color: #2b2a28;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Torn-paper zigzag edges, top and bottom - the "teeth" are painted in the receipt's own
+   background colour, so they read as cut-outs against the page background behind them. */
+.receipt::before,
+.receipt::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background-image: linear-gradient(45deg, transparent 33.333%, #fdfaf0 33.333%, #fdfaf0 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, #fdfaf0 33.333%, #fdfaf0 66.667%, transparent 66.667%);
+    background-size: 16px 24px;
+}
+
+.receipt::before {
+    top: -11px;
+}
+
+.receipt::after {
+    bottom: -11px;
+    transform: rotate(180deg);
+}
+
+.receipt__header {
+    text-align: center;
+}
+
+.receipt__header h1 {
+    margin: 0;
+    font-family: "Space Grotesk", monospace;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.receipt__subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    color: #6b6862;
+}
+
+.receipt__divider {
+    margin: 1.5rem 0;
+    border-top: 2px dashed #b8b3a5;
+}
+
+.receipt__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 20rem;
+    padding: 0.75rem;
+    border: 1px dashed #b8b3a5;
+    background: transparent;
+    font-family: "Space Grotesk", monospace;
+    font-size: 1rem;
+    color: #2b2a28;
+    resize: vertical;
+}
+
+    .receipt__input:focus {
+        outline: none;
+        border-color: #2b2a28;
+    }
+
+    .receipt__input::placeholder {
+        color: #a8a49a;
+    }
+
+.receipt__meta {
+    margin-top: 0.35rem;
+    text-align: right;
+    font-size: 0.75rem;
+    color: #a8a49a;
+}
+
+.receipt__button {
+    width: 100%;
+    margin-top: 1.25rem;
+    padding: 0.75rem;
+    border: none;
+    background: #2b2a28;
+    color: #fdfaf0;
+    font-family: "Space Grotesk", monospace;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+    .receipt__button:disabled {
+        background: #b8b3a5;
+        cursor: not-allowed;
+    }
+
+.receipt__status {
+    margin: 1rem 0 0;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.receipt__status--success {
+    color: #3a7d44;
+}
+
+.receipt__status--error {
+    color: #b3261e;
+}
+
+.receipt__footer {
+    margin: 0;
+    text-align: center;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: #6b6862;
+}
+
+.receipt__barcode {
+    height: 32px;
+    margin-top: 0.75rem;
+    background-image: repeating-linear-gradient(90deg, #2b2a28 0, #2b2a28 2px, transparent 2px, transparent 5px, #2b2a28 5px, #2b2a28 7px, transparent 7px, transparent 9px, #2b2a28 9px, #2b2a28 12px, transparent 12px, transparent 15px);
+}
