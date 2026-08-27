@@ -1,5 +1,6 @@
-﻿@page "/"
+@page "/"
 @inject ChitterApiService ChitterApi
+@inject QuoteService Quotes
 
 <PageTitle>Chitter</PageTitle>
 
@@ -21,6 +22,17 @@
     </button>
 
     <div class="receipt__divider"></div>
+
+    <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
+        @(IsSending ? "Printing..." : "Chinese Proverb")
+    </button>
+
+    <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
+        @(IsSending ? "Printing..." : "Motivational Quote")
+    </button>
+
+    <div class="receipt__divider"></div>
+
 
     @if (StatusMessage is not null)
     {
@@ -44,27 +56,47 @@
     private bool IsError;
 
     /// <summary>
-    /// Sends the current text to tzer0mApi's Chitter endpoint and displays the outcome.
+    /// Sends the current text to tzer0mApi's Chitter endpoint, clearing the text box on success.
     /// </summary>
     private async Task PrintAsync()
+    {
+        bool success = await SendToPrinterAsync(Text);
+        if (success)
+            Text = string.Empty;
+    }
+
+    /// <summary>
+    /// Picks a random motivational quote and prints it, formatted as "quote" followed by the author.
+    /// </summary>
+    private async Task PrintQuoteAsync()
+    {
+        MotivationalQuote quote = Quotes.GetRandomQuote();
+        await SendToPrinterAsync($"\"{quote.Quote}\"\n\n\u2014 {quote.Author}");
+    }
+
+    /// <summary>
+    /// Picks a random Chinese proverb and prints it, with the Chinese text followed by its English translation.
+    /// </summary>
+    private async Task PrintProverbAsync()
+    {
+        ChineseProverb proverb = Quotes.GetRandomProverb();
+        await SendToPrinterAsync($"{proverb.Chinese}\n{proverb.English}");
+    }
+
+    /// <summary>
+    /// Sends text to the printer.
+    /// </summary>
+    /// <param name="text">The text to print.</param>
+    /// <returns>True if the print job was accepted, false otherwise.</returns>
+    private async Task<bool> SendToPrinterAsync(string text)
     {
         IsSending = true;
         StatusMessage = null;
         StateHasChanged();
-
-        ChitterPrintResult result = await ChitterApi.PrintTextAsync(Text);
+        ChitterPrintResult result = await ChitterApi.PrintTextAsync(text);
         IsSending = false;
-
-        if (result.Success)
-        {
-            IsError = false;
-            StatusMessage = "Sent to printer.";
-            Text = string.Empty;
-        }
-        else
-        {
-            IsError = true;
-            StatusMessage = result.ErrorMessage;
-        }
+        IsError = !result.Success;
+        StatusMessage = result.Success ? "Sent to printer." : result.ErrorMessage;
+        return result.Success;
     }
 }

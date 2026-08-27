@@ -8,4 +8,8 @@
     <UserSecretsId>838386b7-619b-4eb5-9d84-4a43b7c261c3</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="Data\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
