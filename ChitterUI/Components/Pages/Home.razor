@@ -17,19 +17,23 @@
         <span>@Text.Length / 1024</span>
     </div>
 
-    <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
-        @(IsSending ? "Printing..." : "Print")
-    </button>
+    <div class="receipt__actions">
+        <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
+            @(IsSending ? "Printing..." : "Print")
+        </button>
+    </div>
 
     <div class="receipt__divider"></div>
 
-    <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
-        @(IsSending ? "Printing..." : "Chinese Proverb")
-    </button>
+    <div class="receipt__actions">
+        <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
+            @(IsSending ? "Printing..." : "Chinese Proverb")
+        </button>
 
-    <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
-        @(IsSending ? "Printing..." : "Motivational Quote")
-    </button>
+        <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
+            @(IsSending ? "Printing..." : "Motivational Quote")
+        </button>
+    </div>
 
     <div class="receipt__divider"></div>
 

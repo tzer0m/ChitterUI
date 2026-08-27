@@ -50,7 +50,7 @@
 }
 
 .receipt__divider {
-    margin: 1.5rem 0;
+    margin: 1rem 0;
     border-top: 2px dashed #b8b3a5;
 }
 
@@ -83,9 +83,15 @@
     color: #a8a49a;
 }
 
+.receipt__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
 .receipt__button {
     width: 100%;
-    margin-top: 1.25rem;
     padding: 0.75rem;
     border: none;
     background: #2b2a28;
