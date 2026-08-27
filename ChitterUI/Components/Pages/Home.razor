@@ -20,12 +20,13 @@
         @(IsSending ? "Printing..." : "Print")
     </button>
 
+    <div class="receipt__divider"></div>
+
     @if (StatusMessage is not null)
     {
         <p class="receipt__status @(IsError ? "receipt__status--error" : "receipt__status--success")">@StatusMessage</p>
     }
 
-    <div class="receipt__divider"></div>
     <div class="receipt__barcode"></div>
 </div>
 
