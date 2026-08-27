@@ -1,0 +1,20 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: [self-hosted, tzer0m]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Stop service
+        run: sudo systemctl stop ChitterUI.service
+      - name: Publish
+        run: dotnet publish ChitterUI/ChitterUI.csproj -c Release -o /home/tzer0m/Services/ChitterUI
+      - name: Start service
+        run: sudo systemctl start ChitterUI.service
+      - name: Check status
+        run: sudo systemctl status ChitterUI.service --no-pager
