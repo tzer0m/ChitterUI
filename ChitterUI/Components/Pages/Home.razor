@@ -129,6 +129,14 @@
             <p class="receipt__status @(IsError ? "receipt__status--error" : "receipt__status--success")">@StatusMessage</p>
         }
     }
+    else if (LocationState == LocationCheckState.NotStarted)
+    {
+        <p class="receipt__status">Chitter only works from home - tap below to confirm your location.</p>
+
+        <div class="receipt__actions">
+            <button type="button" class="receipt__button" @onclick="CheckLocationAsync">Continue</button>
+        </div>
+    }
     else
     {
         <p class="receipt__status">@LocationStateMessage</p>
@@ -216,13 +224,14 @@
     /// <summary>
     /// The current state of the browser geolocation check that gates the whole form.
     /// </summary>
-    private LocationCheckState LocationState = LocationCheckState.Checking;
+    private LocationCheckState LocationState = LocationCheckState.NotStarted;
 
     /// <summary>
     /// The states the location check can be in.
     /// </summary>
     private enum LocationCheckState
     {
+        NotStarted,
         Checking,
         Allowed,
         Denied,
@@ -240,19 +249,17 @@
     };
 
     /// <summary>
-    /// Requests the browser's location on first render and checks it against the configured home geofence.
+    /// Requests the browser's location and checks it against the configured home geofence. Only ever called from the "Continue" button's click handler - Safari silently withholds the permission prompt for a geolocation request that isn't tied to a user gesture, so this can't run automatically on page load the way it used to.
     /// </summary>
-    /// <param name="firstRender">Whether this is the component's first render.</param>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task CheckLocationAsync()
     {
-        if (!firstRender)
-            return;
+        LocationState = LocationCheckState.Checking;
+        StateHasChanged();
 
         IJSObjectReference geolocationModule = await JS.InvokeAsync<IJSObjectReference>("import", "./geolocation.js");
         GeoPosition? position = await geolocationModule.InvokeAsync<GeoPosition?>("getPosition");
 
         LocationState = position is null ? LocationCheckState.Unavailable : Geofence.IsWithinRange(position.Latitude, position.Longitude) ? LocationCheckState.Allowed : LocationCheckState.Denied;
-        StateHasChanged();
     }
 
     /// <summary>
