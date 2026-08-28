@@ -3,6 +3,7 @@
 @inject QuoteService Quotes
 @inject GeofenceService Geofence
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Chitter</PageTitle>
 
@@ -15,29 +16,85 @@
 
     @if (LocationState == LocationCheckState.Allowed)
     {
-        <textarea class="receipt__input" placeholder="Type something to print..." maxlength="1024" @bind="Text" @bind:event="oninput" disabled="@IsSending"></textarea>
-
-        <div class="receipt__meta">
-            <span>@Text.Length / 1024</span>
-        </div>
-
-        <div class="receipt__actions">
-            <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
-                @(IsSending ? "Printing..." : "Print")
+        <div class="receipt__mode-toggle">
+            <button type="button" class="receipt__mode-button @(IsImageMode ? "receipt__mode-button--active" : "")" disabled="@IsSending" @onclick="@(() => SetMode(true))">
+                Image
+            </button>
+            <button type="button" class="receipt__mode-button @(!IsImageMode ? "receipt__mode-button--active" : "")" disabled="@IsSending" @onclick="@(() => SetMode(false))">
+                Text
             </button>
         </div>
 
         <div class="receipt__divider"></div>
 
-        <div class="receipt__actions">
-            <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
-                @(IsSending ? "Printing..." : "Chinese Proverb")
-            </button>
+        @if (IsImageMode)
+        {
+            @if (PreviewDataUrl is not null)
+            {
+                <img class="receipt__preview" src="@PreviewDataUrl" alt="Selected image preview" />
 
-            <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
-                @(IsSending ? "Printing..." : "Motivational Quote")
-            </button>
-        </div>
+                <div class="receipt__actions">
+                    <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintImageAsync">
+                        @(IsSending ? "Printing..." : "Print")
+                    </button>
+
+                    <button type="button" class="receipt__button receipt__button--secondary" disabled="@IsSending" @onclick="ClearImage">
+                        Choose Another
+                    </button>
+                </div>
+            }
+            else if (IsCameraActive)
+            {
+                <video id="@CameraVideoElementId" class="receipt__camera-preview" autoplay playsinline muted></video>
+
+                <div class="receipt__actions">
+                    <button type="button" class="receipt__button" @onclick="CapturePhotoAsync">
+                        Capture
+                    </button>
+
+                    <button type="button" class="receipt__button receipt__button--secondary" @onclick="StopCameraAsync">
+                        Cancel
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="receipt__actions">
+                    <button type="button" class="receipt__button" @onclick="StartCameraAsync">
+                        Take Photo
+                    </button>
+
+                    <InputFile id="chitter-upload-input" OnChange="HandleImageSelected" accept="image/*" class="receipt__file-input" />
+                    <label for="chitter-upload-input" class="receipt__button receipt__button--secondary">Upload File</label>
+                </div>
+            }
+        }
+        else
+        {
+            <textarea class="receipt__input" placeholder="Type something to print..." maxlength="1024" @bind="Text" @bind:event="oninput" disabled="@IsSending"></textarea>
+
+            <div class="receipt__meta">
+                <span>@Text.Length / 1024</span>
+            </div>
+
+            <div class="receipt__actions">
+                <button type="button" class="receipt__button" disabled="@(IsSending || string.IsNullOrWhiteSpace(Text))" @onclick="PrintAsync">
+                    @(IsSending ? "Printing..." : "Print")
+                </button>
+            </div>
+
+            <div class="receipt__divider"></div>
+
+            <div class="receipt__actions">
+                <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintProverbAsync">
+                    @(IsSending ? "Printing..." : "Chinese Proverb")
+                </button>
+
+                <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
+                    @(IsSending ? "Printing..." : "Motivational Quote")
+                </button>
+            </div>
+        }
 
         <div class="receipt__divider"></div>
 
@@ -55,8 +112,50 @@
 </div>
 
 @code {
-    // The text currently entered in the print box.
+    /// <summary>
+    /// The text currently entered in the print box.
+    /// </summary>
     private string Text = string.Empty;
+
+    /// <summary>
+    /// Whether the image-print form is showing, as opposed to the text-print form.
+    /// </summary>
+    private bool IsImageMode = true;
+
+    /// <summary>
+    /// The bytes of the currently-selected image, or null if none is selected.
+    /// </summary>
+    private byte[]? ImageBytes;
+
+    /// <summary>
+    /// The original file name of the currently-selected image.
+    /// </summary>
+    private string? ImageFileName;
+
+    /// <summary>
+    /// The content type of the currently-selected image.
+    /// </summary>
+    private string? ImageContentType;
+
+    /// <summary>
+    /// A data URL for the currently-selected image, used to preview it before printing.
+    /// </summary>
+    private string? PreviewDataUrl;
+
+    /// <summary>
+    /// Whether the live webcam preview is currently showing (desktop browsers, which don't route <input capture> to a camera, use this instead).
+    /// </summary>
+    private bool IsCameraActive;
+
+    /// <summary>
+    /// The id of the <video> element the webcam preview is rendered into.
+    /// </summary>
+    private const string CameraVideoElementId = "chitter-camera-video";
+
+    /// <summary>
+    /// The camera.js module, imported lazily on first use.
+    /// </summary>
+    private IJSObjectReference? CameraModule;
 
     // Whether a print request is currently in flight.
     private bool IsSending;
@@ -108,13 +207,136 @@
     }
 
     /// <summary>
+    /// Switches between the image and text print forms, clearing any status message from the previous mode.
+    /// </summary>
+    /// <param name="imageMode">True to switch to the image form, false to switch to the text form.</param>
+    private async Task SetMode(bool imageMode)
+    {
+        if (!imageMode && IsCameraActive)
+            await StopCameraAsync();
+
+        IsImageMode = imageMode;
+        StatusMessage = null;
+    }
+
+    /// <summary>
+    /// Starts the live webcam preview, for browsers (mainly desktop) that don't route <input capture> to a camera.
+    /// </summary>
+    private async Task StartCameraAsync()
+    {
+        StatusMessage = null;
+        IsCameraActive = true;
+        StateHasChanged();
+
+        CameraModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./camera.js");
+        bool started = await CameraModule.InvokeAsync<bool>("startCamera", CameraVideoElementId);
+        if (!started)
+        {
+            IsCameraActive = false;
+            IsError = true;
+            StatusMessage = "Couldn't access your camera - check the browser's camera permission.";
+        }
+    }
+
+    /// <summary>
+    /// Grabs a still frame from the live webcam preview as the selected image, then stops the camera.
+    /// </summary>
+    private async Task CapturePhotoAsync()
+    {
+        if (CameraModule is null)
+            return;
+
+        string? dataUrl = await CameraModule.InvokeAsync<string?>("capturePhoto", CameraVideoElementId);
+        if (dataUrl is null)
+        {
+            IsError = true;
+            StatusMessage = "Couldn't capture a photo - try again.";
+            return;
+        }
+
+        int commaIndex = dataUrl.IndexOf(',');
+        string contentType = dataUrl[5..commaIndex].Split(';')[0];
+        ImageBytes = Convert.FromBase64String(dataUrl[(commaIndex + 1)..]);
+        ImageFileName = "camera.jpg";
+        ImageContentType = contentType;
+        PreviewDataUrl = dataUrl;
+
+        await StopCameraAsync();
+    }
+
+    /// <summary>
+    /// Stops the live webcam preview and releases the camera.
+    /// </summary>
+    private async Task StopCameraAsync()
+    {
+        if (CameraModule is not null)
+            await CameraModule.InvokeVoidAsync("stopCamera", CameraVideoElementId);
+
+        IsCameraActive = false;
+    }
+
+    /// <summary>
+    /// Reads the file picked from the upload input into memory and builds a preview for it.
+    /// </summary>
+    /// <param name="e">The file-change event.</param>
+    private async Task HandleImageSelected(InputFileChangeEventArgs e)
+    {
+        IBrowserFile file = e.File;
+        StatusMessage = null;
+
+        try
+        {
+            using MemoryStream stream = new();
+            await file.OpenReadStream(UploadLimits.MaxImageSizeBytes).CopyToAsync(stream);
+
+            ImageBytes = stream.ToArray();
+            ImageFileName = file.Name;
+            ImageContentType = file.ContentType;
+            PreviewDataUrl = $"data:{ImageContentType};base64,{Convert.ToBase64String(ImageBytes)}";
+        }
+        catch (IOException)
+        {
+            IsError = true;
+            StatusMessage = "That image is too large - try a smaller photo.";
+        }
+    }
+
+    /// <summary>
+    /// Clears the currently-selected image, returning to the picker.
+    /// </summary>
+    private void ClearImage()
+    {
+        ImageBytes = null;
+        ImageFileName = null;
+        ImageContentType = null;
+        PreviewDataUrl = null;
+    }
+
+    /// <summary>
     /// Sends the current text to tzer0mApi's Chitter endpoint, clearing the text box on success.
     /// </summary>
     private async Task PrintAsync()
     {
-        bool success = await SendToPrinterAsync(Text);
+        string text = Text;
+        bool success = await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
         if (success)
             Text = string.Empty;
+    }
+
+    /// <summary>
+    /// Sends the currently-selected image to tzer0mApi's Chitter endpoint, clearing it on success.
+    /// </summary>
+    private async Task PrintImageAsync()
+    {
+        if (ImageBytes is null || ImageFileName is null || ImageContentType is null)
+            return;
+
+        byte[] bytes = ImageBytes;
+        string fileName = ImageFileName;
+        string contentType = ImageContentType;
+        bool success = await SendToPrinterAsync(() => ChitterApi.PrintImageAsync(new MemoryStream(bytes), fileName, contentType));
+        if (success)
+            ClearImage();
     }
 
     /// <summary>
@@ -123,7 +345,8 @@
     private async Task PrintQuoteAsync()
     {
         MotivationalQuote quote = Quotes.GetRandomQuote();
-        await SendToPrinterAsync($"\"{quote.Quote}\"\n\n\u2014 {quote.Author}");
+        string text = $"\"{quote.Quote}\"\n\n— {quote.Author}";
+        await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
     }
 
     /// <summary>
@@ -132,23 +355,43 @@
     private async Task PrintProverbAsync()
     {
         ChineseProverb proverb = Quotes.GetRandomProverb();
-        await SendToPrinterAsync($"{proverb.Chinese}\n{proverb.English}");
+        string text = $"{proverb.Chinese}\n{proverb.English}";
+        await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
     }
 
     /// <summary>
-    /// Sends text to the printer.
+    /// Runs a print action against tzer0mApi, tracking the in-flight state and reporting the outcome.
     /// </summary>
-    /// <param name="text">The text to print.</param>
+    /// <param name="sendAction">The print call to make.</param>
     /// <returns>True if the print job was accepted, false otherwise.</returns>
-    private async Task<bool> SendToPrinterAsync(string text)
+    private async Task<bool> SendToPrinterAsync(Func<Task<ChitterPrintResult>> sendAction)
     {
         IsSending = true;
         StatusMessage = null;
         StateHasChanged();
-        ChitterPrintResult result = await ChitterApi.PrintTextAsync(text);
+        ChitterPrintResult result = await sendAction();
         IsSending = false;
         IsError = !result.Success;
         StatusMessage = result.Success ? "Sent to printer." : result.ErrorMessage;
         return result.Success;
+    }
+
+    /// <summary>
+    /// Releases the camera if the live preview is still active when this component goes away.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (CameraModule is null)
+            return;
+
+        try
+        {
+            await CameraModule.InvokeVoidAsync("stopCamera", CameraVideoElementId);
+            await CameraModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone - nothing left to clean up.
+        }
     }
 }

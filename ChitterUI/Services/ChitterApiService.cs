@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ChitterUI.Models;
@@ -25,12 +26,44 @@ public class ChitterApiService(HttpClient httpClient, IConfiguration config, ILo
     /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
     public async Task<ChitterPrintResult> PrintTextAsync(string text)
     {
+        using HttpRequestMessage request = new(HttpMethod.Post, "Chitter/Text");
+        request.Content = JsonContent.Create(text);
+        return await SendAsync(request, "text print");
+    }
+
+    /// <summary>
+    /// Sends the given image to tzer0mApi's Chitter image-print endpoint.
+    /// </summary>
+    /// <param name="imageStream">The image content stream.</param>
+    /// <param name="fileName">The original file name of the image.</param>
+    /// <param name="contentType">The image's content type.</param>
+    /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
+    public async Task<ChitterPrintResult> PrintImageAsync(Stream imageStream, string fileName, string contentType)
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, "Chitter/Image");
+
+        using MultipartFormDataContent formContent = new();
+        using StreamContent streamContent = new(imageStream)
+        {
+            Headers = { ContentType = new MediaTypeHeaderValue(contentType) },
+        };
+        formContent.Add(streamContent, "image", fileName);
+        request.Content = formContent;
+
+        return await SendAsync(request, "image print");
+    }
+
+    /// <summary>
+    /// Sends a request to tzer0mApi, attaching the API key and translating the response (or a connectivity failure) into a <see cref="ChitterPrintResult"/>.
+    /// </summary>
+    /// <param name="request">The request to send.</param>
+    /// <param name="description">A short description of the request, used in log messages.</param>
+    private async Task<ChitterPrintResult> SendAsync(HttpRequestMessage request, string description)
+    {
         try
         {
-            // Create api request.
-            using HttpRequestMessage request = new(HttpMethod.Post, "Chitter/Text");
+            // Attach api key.
             request.Headers.Add("X-API-Key", ApiKey);
-            request.Content = JsonContent.Create(text);
 
             // Send request and check response.
             using HttpResponseMessage response = await httpClient.SendAsync(request);
@@ -39,7 +72,7 @@ public class ChitterApiService(HttpClient httpClient, IConfiguration config, ILo
 
             // Log the failure and resolve a user-facing message for it.
             if (logger.IsEnabled(LogLevel.Warning))
-                logger.LogWarning("tzer0mApi returned {StatusCode} for a Chitter text print request", response.StatusCode);
+                logger.LogWarning("tzer0mApi returned {StatusCode} for a Chitter {Description} request", response.StatusCode, description);
 
             // Resolve a user-facing error message for the failed response and return it in the result.
             return new ChitterPrintResult(false, await ResolveErrorMessageAsync(response));
@@ -48,8 +81,8 @@ public class ChitterApiService(HttpClient httpClient, IConfiguration config, ILo
         {
             // Log error and return a generic connectivity message on exception.
             if (logger.IsEnabled(LogLevel.Error))
-                logger.LogError(ex, "Failed to reach tzer0mApi for a Chitter text print request");
-            return new ChitterPrintResult(false, "Couldn't reach the print service. Is Tyrion online?");
+                logger.LogError(ex, "Failed to reach tzer0mApi for a Chitter {Description} request", description);
+            return new ChitterPrintResult(false, "Couldn't reach the print service.");
         }
     }
 
@@ -75,7 +108,7 @@ public class ChitterApiService(HttpClient httpClient, IConfiguration config, ILo
         return response.StatusCode switch
         {
             HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => "Not authorized to print - check the API key configuration.",
-            HttpStatusCode.RequestEntityTooLarge => "That text is too long to print.",
+            HttpStatusCode.RequestEntityTooLarge => "That's too large to print.",
             HttpStatusCode.BadGateway => "Failed to reach the printer.",
             _ => $"tzer0mApi returned an unexpected error ({(int)response.StatusCode}).",
         };

@@ -1,8 +1,13 @@
+using ChitterUI;
 using ChitterUI.Components;
 using ChitterUI.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents()
+    .AddHubOptions(options =>
+    {
+        options.MaximumReceiveMessageSize = UploadLimits.MaxImageSizeBytes;
+    });
 builder.Services.AddHttpClient<ChitterApiService>(client => client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? throw new InvalidOperationException("Api:BaseUrl is not configured")));
 builder.Services.AddSingleton<QuoteService>();
 builder.Services.AddSingleton<GeofenceService>();

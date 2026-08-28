@@ -9,8 +9,7 @@
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
-/* Torn-paper zigzag edges, top and bottom - the "teeth" are painted in the receipt's own
-   background colour, so they read as cut-outs against the page background behind them. */
+/* Torn-paper zigzag edges, top and bottom - the "teeth" are painted in the receipt's own background colour, so they read as cut-outs against the page background behind them. */
 .receipt::before,
 .receipt::after {
     content: "";
@@ -135,4 +134,74 @@
     height: 32px;
     margin-top: 0.75rem;
     background-image: repeating-linear-gradient(90deg, #2b2a28 0, #2b2a28 2px, transparent 2px, transparent 5px, #2b2a28 5px, #2b2a28 7px, transparent 7px, transparent 9px, #2b2a28 9px, #2b2a28 12px, transparent 12px, transparent 15px);
+}
+
+.receipt__mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.receipt__mode-button {
+    flex: 1;
+    padding: 0.6rem;
+    border: 1px dashed #b8b3a5;
+    background: transparent;
+    color: #6b6862;
+    font-family: "Space Grotesk", monospace;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+    .receipt__mode-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+.receipt__mode-button--active {
+    border-color: #2b2a28;
+    background: #2b2a28;
+    color: #fdfaf0;
+}
+
+.receipt__button--secondary {
+    background: transparent;
+    border: 1px dashed #b8b3a5;
+    color: #2b2a28;
+}
+
+    .receipt__button--secondary:disabled {
+        background: transparent;
+        color: #b8b3a5;
+        cursor: not-allowed;
+    }
+
+label.receipt__button {
+    display: block;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.receipt__file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.receipt__preview,
+.receipt__camera-preview {
+    display: block;
+    width: 100%;
+    max-height: 20rem;
+    object-fit: contain;
+    border: 1px dashed #b8b3a5;
+    background: #f2efe4;
 }
