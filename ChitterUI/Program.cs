@@ -10,6 +10,7 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents()
     });
 builder.Services.AddHttpClient<ChitterApiService>(client => client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"] ?? throw new InvalidOperationException("Api:BaseUrl is not configured")));
 builder.Services.AddSingleton<QuoteService>();
+builder.Services.AddSingleton<PackingListService>();
 builder.Services.AddSingleton<GeofenceService>();
 
 WebApplication app = builder.Build();

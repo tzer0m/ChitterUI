@@ -1,6 +1,7 @@
 @page "/"
 @inject ChitterApiService ChitterApi
 @inject QuoteService Quotes
+@inject PackingListService PackingList
 @inject GeofenceService Geofence
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -93,7 +94,32 @@
                 <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintQuoteAsync">
                     @(IsSending ? "Printing..." : "Motivational Quote")
                 </button>
+
+                <button type="button" class="receipt__button" disabled="@IsSending" @onclick="TogglePackingListOptions">
+                    Packing List
+                </button>
             </div>
+
+            @if (ShowPackingListOptions)
+            {
+                <div class="receipt__checkbox-row">
+                    <label class="receipt__checkbox-label">
+                        <input type="checkbox" checked="@PackingListInternational" disabled="@IsSending" @onchange="OnInternationalChanged" />
+                        International
+                    </label>
+
+                    <label class="receipt__checkbox-label">
+                        <input type="checkbox" checked="@PackingListSkiing" disabled="@IsSending" @onchange="OnSkiingChanged" />
+                        Skiing
+                    </label>
+                </div>
+
+                <div class="receipt__actions">
+                    <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintPackingListAsync">
+                        @(IsSending ? "Printing..." : "Print Packing List")
+                    </button>
+                </div>
+            }
         }
 
         <div class="receipt__divider"></div>
@@ -157,16 +183,39 @@
     /// </summary>
     private IJSObjectReference? CameraModule;
 
-    // Whether a print request is currently in flight.
+    /// <summary>
+    /// Whether the packing list's International/Skiing checkboxes are showing.
+    /// </summary>
+    private bool ShowPackingListOptions;
+
+    /// <summary>
+    /// Whether the packing list's International section should be included.
+    /// </summary>
+    private bool PackingListInternational;
+
+    /// <summary>
+    /// Whether the packing list's Skiing section should be included - ticking this also ticks International, since skiing trips are always international here.
+    /// </summary>
+    private bool PackingListSkiing;
+
+    /// <summary>
+    /// Whether a print request is currently in flight.
+    /// </summary>
     private bool IsSending;
 
-    // The most recent status message to show the user, or null if none yet.
+    /// <summary>
+    /// The most recent status message to show the user, or null if none yet.
+    /// </summary>
     private string? StatusMessage;
 
-    // Whether StatusMessage represents an error rather than a success.
+    /// <summary>
+    /// Whether StatusMessage represents an error rather than a success.
+    /// </summary>
     private bool IsError;
 
-    // The current state of the browser geolocation check that gates the whole form.
+    /// <summary>
+    /// The current state of the browser geolocation check that gates the whole form.
+    /// </summary>
     private LocationCheckState LocationState = LocationCheckState.Checking;
 
     /// <summary>
@@ -356,6 +405,42 @@
     {
         ChineseProverb proverb = Quotes.GetRandomProverb();
         string text = $"{proverb.Chinese}\n{proverb.English}";
+        await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
+    }
+
+    /// <summary>
+    /// Shows or hides the packing list's International/Skiing checkboxes.
+    /// </summary>
+    private void TogglePackingListOptions() => ShowPackingListOptions = !ShowPackingListOptions;
+
+    /// <summary>
+    /// Handles the International checkbox changing - unticking it also unticks Skiing, since Skiing implies International.
+    /// </summary>
+    /// <param name="e">The checkbox's change event.</param>
+    private void OnInternationalChanged(ChangeEventArgs e)
+    {
+        PackingListInternational = e.Value is true;
+        if (!PackingListInternational)
+            PackingListSkiing = false;
+    }
+
+    /// <summary>
+    /// Handles the Skiing checkbox changing - ticking it also ticks International, since skiing trips are always international here.
+    /// </summary>
+    /// <param name="e">The checkbox's change event.</param>
+    private void OnSkiingChanged(ChangeEventArgs e)
+    {
+        PackingListSkiing = e.Value is true;
+        if (PackingListSkiing)
+            PackingListInternational = true;
+    }
+
+    /// <summary>
+    /// Builds and prints the packing list, including the International/Skiing sections per the current checkboxes.
+    /// </summary>
+    private async Task PrintPackingListAsync()
+    {
+        string text = PackingList.BuildText(PackingListInternational, PackingListSkiing);
         await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
     }
 
