@@ -184,7 +184,7 @@ label.receipt__button {
     text-align: center;
 }
 
-.receipt__file-input {
+::deep .receipt__file-input {
     position: absolute;
     width: 1px;
     height: 1px;
