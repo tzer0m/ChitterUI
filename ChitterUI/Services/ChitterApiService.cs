@@ -54,6 +54,38 @@ public class ChitterApiService(HttpClient httpClient, IConfiguration config, ILo
     }
 
     /// <summary>
+    /// Tells tzer0mApi to pick a random motivational quote and print it.
+    /// </summary>
+    /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
+    public async Task<ChitterPrintResult> PrintQuoteAsync()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, "Chitter/Quote");
+        return await SendAsync(request, "quote print");
+    }
+
+    /// <summary>
+    /// Tells tzer0mApi to pick a random Chinese proverb and print it.
+    /// </summary>
+    /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
+    public async Task<ChitterPrintResult> PrintProverbAsync()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, "Chitter/Proverb");
+        return await SendAsync(request, "proverb print");
+    }
+
+    /// <summary>
+    /// Tells tzer0mApi to build and print the packing list, including the International and/or Skiing sections when requested.
+    /// </summary>
+    /// <param name="international">Whether to include the International section.</param>
+    /// <param name="skiing">Whether to include the Skiing section.</param>
+    /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
+    public async Task<ChitterPrintResult> PrintPackingListAsync(bool international, bool skiing)
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, $"Chitter/PackingList?international={international}&skiing={skiing}");
+        return await SendAsync(request, "packing list print");
+    }
+
+    /// <summary>
     /// Sends a request to tzer0mApi, attaching the API key and translating the response (or a connectivity failure) into a <see cref="ChitterPrintResult"/>.
     /// </summary>
     /// <param name="request">The request to send.</param>

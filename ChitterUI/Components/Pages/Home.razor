@@ -1,7 +1,5 @@
 @page "/"
 @inject ChitterApiService ChitterApi
-@inject QuoteService Quotes
-@inject PackingListService PackingList
 @inject GeofenceService Geofence
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -396,23 +394,19 @@
     }
 
     /// <summary>
-    /// Picks a random motivational quote and prints it, formatted as "quote" followed by the author.
+    /// Tells tzer0mApi to pick a random motivational quote and print it.
     /// </summary>
     private async Task PrintQuoteAsync()
     {
-        MotivationalQuote quote = Quotes.GetRandomQuote();
-        string text = $"\"{quote.Quote}\"\n\n— {quote.Author}";
-        await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
+        await SendToPrinterAsync(() => ChitterApi.PrintQuoteAsync());
     }
 
     /// <summary>
-    /// Picks a random Chinese proverb and prints it, with the Chinese text followed by its English translation.
+    /// Tells tzer0mApi to pick a random Chinese proverb and print it.
     /// </summary>
     private async Task PrintProverbAsync()
     {
-        ChineseProverb proverb = Quotes.GetRandomProverb();
-        string text = $"{proverb.Chinese}\n{proverb.English}";
-        await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
+        await SendToPrinterAsync(() => ChitterApi.PrintProverbAsync());
     }
 
     /// <summary>
@@ -443,12 +437,11 @@
     }
 
     /// <summary>
-    /// Builds and prints the packing list, including the International/Skiing sections per the current checkboxes.
+    /// Tells tzer0mApi to build and print the packing list, including the International/Skiing sections per the current checkboxes.
     /// </summary>
     private async Task PrintPackingListAsync()
     {
-        string text = PackingList.BuildText(PackingListInternational, PackingListSkiing);
-        await SendToPrinterAsync(() => ChitterApi.PrintTextAsync(text));
+        await SendToPrinterAsync(() => ChitterApi.PrintPackingListAsync(PackingListInternational, PackingListSkiing));
     }
 
     /// <summary>
