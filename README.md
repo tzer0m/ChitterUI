@@ -1,5 +1,7 @@
 # ChitterUI
 
+[![Deploy](https://github.com/tzer0m/ChitterUI/actions/workflows/deploy.yml/badge.svg)](https://github.com/tzer0m/ChitterUI/actions/workflows/deploy.yml) [![Dependabot](https://github.com/tzer0m/ChitterUI/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/tzer0m/ChitterUI/actions/workflows/dependabot/dependabot-updates)
+
 A Blazor Server front end for [tzer0mApi](https://github.com/tzer0m/tzer0mApi)'s Chitter module — sends print jobs to a home-mounted Aures ODP 333 receipt printer.
 
 ## Features
