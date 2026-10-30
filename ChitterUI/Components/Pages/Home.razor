@@ -93,6 +93,10 @@
                     @(IsSending ? "Printing..." : "Motivational Quote")
                 </button>
 
+                <button type="button" class="receipt__button" disabled="@IsSending" @onclick="PrintHeadlineAsync">
+                    @(IsSending ? "Printing..." : "News Headline")
+                </button>
+
                 <button type="button" class="receipt__button" disabled="@IsSending" @onclick="TogglePackingListOptions">
                     Packing List
                 </button>
@@ -399,6 +403,14 @@
     private async Task PrintQuoteAsync()
     {
         await SendToPrinterAsync(() => ChitterApi.PrintQuoteAsync());
+    }
+
+    /// <summary>
+    /// Tells tzer0mApi to fetch the top news headline and print it.
+    /// </summary>
+    private async Task PrintHeadlineAsync()
+    {
+        await SendToPrinterAsync(() => ChitterApi.PrintHeadlineAsync());
     }
 
     /// <summary>

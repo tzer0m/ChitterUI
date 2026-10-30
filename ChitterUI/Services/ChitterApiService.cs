@@ -64,6 +64,16 @@ public class ChitterApiService(HttpClient httpClient, IConfiguration config, ILo
     }
 
     /// <summary>
+    /// Tells tzer0mApi to fetch the top news headline and print it.
+    /// </summary>
+    /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
+    public async Task<ChitterPrintResult> PrintHeadlineAsync()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, "Chitter/Headline");
+        return await SendAsync(request, "headline print");
+    }
+
+    /// <summary>
     /// Tells tzer0mApi to pick a random Chinese proverb and print it.
     /// </summary>
     /// <returns>A result describing whether the print job was accepted, with a user-facing message on failure.</returns>
